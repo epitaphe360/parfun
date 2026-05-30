@@ -1,18 +1,12 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,200;0,600;1,900&display=swap");
-@import url("https://rsms.me/inter/inter.css");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 html {
-  font-family: "Inter", sans-serif;
-}
-
-@supports (font-variation-settings: normal) {
-  html {
-    font-family: "Inter var", sans-serif;
-  }
+  font-family: "DM Sans", sans-serif;
+  background: linear-gradient(135deg, #F5F0EB 0%, #EDE4D8 50%, #E8DDD0 100%);
 }
 
 .app {
@@ -28,62 +22,195 @@ html {
 }
 
 .head-text {
-  @apply xl:text-[10rem] text-[6rem] xl:leading-[11rem] leading-[7rem] font-black text-black;
+  font-family: "Playfair Display", serif;
+  @apply xl:text-[8rem] text-[4.5rem] xl:leading-[9rem] leading-[5rem] font-black text-[#1A1A1A];
 }
 
-.download-btn {
-  @apply w-14 h-14 flex justify-center items-center rounded-full glassmorphism cursor-pointer outline-none;
-}
-
-.editortabs-container {
-  @apply glassmorphism w-16 border-[2px] rounded-lg flex flex-col justify-center items-center ml-1 py-4 gap-4;
-}
-
-.filtertabs-container {
-  @apply absolute z-10 bottom-5 right-0 left-0 w-full flex justify-center items-center flex-wrap gap-4;
-}
-
-.aipicker-container {
-  @apply absolute left-full ml-3 glassmorphism p-3 w-[195px] h-[220px] rounded-md flex flex-col gap-4;
-}
-
-.aipicker-textarea {
-  @apply w-full bg-transparent text-sm border border-gray-300 p-2 outline-none flex-1;
-}
-
-.filepicker-container {
-  @apply absolute left-full ml-3 glassmorphism p-3 w-[195px] h-[220px] flex flex-col rounded-md;
+.brand-mark {
+  font-family: "Playfair Display", serif;
+  @apply text-sm font-bold tracking-[0.3em] text-[#C9A962];
 }
 
 .filepicker-label {
-  @apply border border-gray-300 py-1.5 px-2 rounded-md shadow-sm text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer w-fit;
-}
-
-.tab-btn {
-  @apply w-14 h-14 flex justify-center items-center cursor-pointer select-none;
+  @apply border border-[#C9A962] py-1.5 px-2 rounded-md shadow-sm text-xs text-gray-700 cursor-pointer w-fit;
 }
 
 .glassmorphism {
-  background: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 2px 30px 0 rgba(31, 38, 135, 0.07);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 30px rgba(31, 38, 135, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.structured-panel {
+  @apply mt-6 ml-4 glassmorphism rounded-xl border-[2px] border-white/40 flex;
+  width: min(90vw, 580px);
+  min-height: 480px;
+  max-height: 90vh;
+}
+
+.sections-column {
+  @apply p-4 border-r border-white/40 flex flex-col gap-1.5;
+  width: 200px;
+  overflow-y: auto;
+  max-height: 520px;
+}
+
+/* ── Mobile layout ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .structured-panel {
+    @apply fixed bottom-0 left-0 right-0 mt-0 ml-0 rounded-t-2xl rounded-b-none flex-col border-x-0 border-b-0;
+    width: 100%;
+    min-height: 0;
+    max-height: 55vh;
+  }
+
+  .sections-column {
+    @apply flex-row border-r-0 border-b border-white/40 py-2 px-3;
+    width: 100%;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0.5rem;
+  }
+
+  .sections-title {
+    @apply hidden;
+  }
+
+  .section-btn {
+    @apply whitespace-nowrap text-xs px-2.5 py-1.5 flex-shrink-0;
+  }
+
+  .editor-column {
+    @apply overflow-y-auto pb-4;
+    max-height: calc(55vh - 56px);
+  }
+
+  .home {
+    @apply p-4;
+  }
+
+  .head-text {
+    @apply text-[3rem] leading-[3.5rem];
+  }
+}
+
+.sections-title {
+  @apply text-xs uppercase tracking-[0.12em] text-gray-500 mb-2 font-bold;
+}
+
+.section-btn {
+  @apply text-left px-3 py-2 rounded-lg text-sm transition-all bg-white/55 text-[#1A1A1A] hover:bg-white/80;
+}
+
+.section-btn.active {
+  @apply bg-[#1A1A1A] text-white;
+}
+
+.section-btn.compact {
+  @apply text-xs;
+}
+
+.divider {
+  @apply w-full h-px bg-white/60 my-2;
+}
+
+.editor-column {
+  @apply flex-1 p-4 flex flex-col gap-3;
+}
+
+.editor-header {
+  @apply flex items-center justify-between;
+}
+
+.editor-title {
+  @apply text-sm font-bold text-[#1A1A1A] uppercase tracking-wider;
+}
+
+.editor-content {
+  @apply flex-1 relative overflow-y-auto pr-1;
+}
+
+.editor-content > * {
+  @apply mb-3;
+}
+
+.picker-panel {
+  @apply relative left-0 ml-0 glassmorphism p-3 rounded-md flex flex-col gap-2;
+}
+
+.picker-panel:last-child {
+  @apply mb-0;
+}
+
+.picker-title {
+  @apply text-xs font-bold text-[#1A1A1A] uppercase tracking-wider;
+}
+
+.picker-subtitle {
+  @apply text-xs font-semibold text-gray-600;
+}
+
+.picker-option {
+  @apply text-left px-3 py-2 rounded-md text-xs transition-all bg-white/50 text-gray-700 hover:bg-white cursor-pointer border border-transparent;
+}
+
+.picker-option.active {
+  @apply bg-[#1A1A1A] text-white border-[#1A1A1A];
+}
+
+.picker-row {
+  @apply flex flex-wrap gap-1;
+}
+
+.picker-chip {
+  @apply px-2 py-1 rounded-full text-xs bg-white/60 cursor-pointer border border-transparent transition-all;
+}
+
+.picker-chip.active {
+  @apply bg-[#C9A962] text-white border-[#C9A962];
+}
+
+.preset-card {
+  @apply p-2 rounded-md bg-white/50 cursor-pointer border border-transparent transition-all text-left;
+}
+
+.preset-card.active {
+  @apply border-[#C9A962] bg-white/80;
+}
+
+.preset-swatch {
+  @apply w-4 h-4 rounded-full border border-white/50;
+}
+
+.liquid-slider {
+  @apply accent-[#C9A962];
+}
+
+.progress-bar {
+  @apply w-full h-1.5 bg-gray-200 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full bg-[#C9A962] transition-all duration-300;
+}
+
+.export-btn {
+  @apply w-10 h-10 flex items-center justify-center rounded-full glassmorphism cursor-pointer text-[#1A1A1A] hover:bg-white/60 transition-all;
 }
 
 input[type="file"] {
-  z-index: -1;
-  position: absolute;
-  opacity: 0;
+  @apply sr-only;
 }
 
 .sketch-picker {
   width: 170px !important;
-  background: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
   box-shadow: 0 2px 30px 0 rgba(31, 38, 135, 0.07) !important;
   backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: 6px !important;
 }
 

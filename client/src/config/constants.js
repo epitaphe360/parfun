@@ -1,38 +1,12 @@
-import { swatch, fileIcon, ai, logoShirt, stylishShirt } from "../assets";
-
-export const EditorTabs = [
-  {
-    name: "colorpicker",
-    icon: swatch,
-  },
-  {
-    name: "filepicker",
-    icon: fileIcon,
-  },
-  {
-    name: "aipicker",
-    icon: ai,
-  },
+export const CapTypes = [
+  { id: 'classic', label: 'Classique' },
+  { id: 'dome',    label: 'Dôme' },
+  { id: 'modern',  label: 'Moderne' },
 ];
 
-export const FilterTabs = [
-  {
-    name: "logoShirt",
-    icon: logoShirt,
-  },
-  {
-    name: "stylishShirt",
-    icon: stylishShirt,
-  },
+export const CapFinishes = [
+  { id: 'gold',   label: 'Or' },
+  { id: 'silver', label: 'Argent' },
+  { id: 'matte',  label: 'Mat' },
+  { id: 'custom', label: 'Personnalisé' },
 ];
-
-export const DecalTypes = {
-  logo: {
-    stateProperty: "logoDecal",
-    filterTab: "logoShirt",
-  },
-  full: {
-    stateProperty: "fullDecal",
-    filterTab: "stylishShirt",
-  },
-};

@@ -1,172 +1,258 @@
-import { AnimatePresence, motion } from "framer-motion";
-import React, { useState } from "react";
-import { useSnapshot } from "valtio";
+import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { useSnapshot } from 'valtio';
 
 import {
-  AIPicker,
+  AnimationPicker,
+  BottlePicker,
+  CapPicker,
   ColorPicker,
   CustomButton,
+  EngravingPicker,
+  EnvironmentPicker,
+  ExportButton,
   FilePicker,
-  Tab,
-} from "../components";
-import config from "../config/config";
-import { DecalTypes, EditorTabs, FilterTabs } from "../config/constants";
-import { reader } from "../config/helpers";
-import { fadeAnimation, slideAnimation } from "../config/motion";
-import state from "../store";
+  FragrancePicker,
+  FragranceQuiz,
+  LiquidLevelSlider,
+  PhotoToGlbPicker,
+  PresetPicker,
+  ShareButton,
+} from '../components';
+import { reader } from '../config/helpers';
+import { fadeAnimation, slideAnimation } from '../config/motion';
+import state from '../store';
+import { loadFromUrl, loadConfig, applyConfigRules } from '../utils/configStorage';
+import { undo, redo } from '../utils/history';
+import { isRealImage } from '../canvas/bottles/BottleLabel';
+
+// Detects whether a decal slot holds a real user image (not the empty placeholder)
+const isRealDecal = (data) => isRealImage(data) && data.length > 200;
+
+const SECTIONS = [
+  { id: 'flacon',    label: 'Flacon' },
+  { id: 'jus',       label: 'Jus' },
+  { id: 'bouchon',   label: 'Bouchon' },
+  { id: 'etiquette', label: 'Étiquette' },
+  { id: 'gravure',   label: 'Gravure' },
+  { id: 'fragrance', label: 'Nom & Vol.' },
+  { id: 'ambiance',  label: 'Ambiance' },
+  { id: 'animation', label: 'Animation' },
+  { id: 'import3d',  label: 'Import 3D' },
+  { id: 'presets',   label: 'Presets' },
+  { id: 'quiz',      label: 'Quiz' },
+];
 
 const Customizer = () => {
   const snap = useSnapshot(state);
-  const serverUrl = config.production.backendUrl;
-  const [file, setFile] = useState("");
+  const [file, setFile] = useState('');
+  const [activeSection, setActiveSection] = useState('flacon');
 
-  const [prompt, setPrompt] = useState("");
-  const [generatingImg, setGeneratingImg] = useState(false);
-
-  const [activeEditorTab, setActiveEditorTab] = useState("");
-  const [activeFilterTab, setActiveFilterTab] = useState({
-    logoShirt: true,
-    stylishShirt: false,
-  });
-
-  // show tab content depending on the activeTab
-  const generateTabContent = () => {
-    switch (activeEditorTab) {
-      case "colorpicker":
-        return <ColorPicker />;
-      case "filepicker":
-        return <FilePicker file={file} setFile={setFile} readFile={readFile} />;
-      case "aipicker":
-        return (
-          <AIPicker
-            prompt={prompt}
-            setPrompt={setPrompt}
-            generatingImg={generatingImg}
-            handleSubmit={handleSubmit}
-          />
-        );
-      default:
-        return null;
+  // Load saved / URL configuration on first mount
+  useEffect(() => {
+    if (!loadFromUrl(state)) {
+      loadConfig(state);
+    } else {
+      applyConfigRules(state);
     }
-  };
+  }, []);
 
-  const handleSubmit = async (type) => {
-    if (!prompt) return alert("Please enter a prompt");
+  // Keyboard shortcuts: Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (mod && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+    };
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
+  }, []);
 
-    try {
-      setGeneratingImg(true);
-
-      const response = await fetch(serverUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-        }),
-      });
-
-      const data = await response.json();
-
-      handleDecals(type, `data:image/png;base64,${data.photo}`);
-    } catch (error) {
-      alert(error);
-    } finally {
-      setGeneratingImg(false);
-      setActiveEditorTab("");
-    }
-  };
-
+  // ── File / decal handling ──────────────────────────────────────────────
   const handleDecals = (type, result) => {
-    const decalType = DecalTypes[type];
-
-    state[decalType.stateProperty] = result;
-
-    if (!activeFilterTab[decalType.filterTab]) {
-      handleActiveFilterTab(decalType.filterTab);
+    if (type === 'logo') {
+      state.logoDecal = result;
+      state.isLogoTexture = true;
+    } else {
+      state.fullDecal = result;
+      state.isFullTexture = true;
     }
-  };
-
-  const handleActiveFilterTab = (tabName) => {
-    switch (tabName) {
-      case "logoShirt":
-        state.isLogoTexture = !activeFilterTab[tabName];
-        break;
-      case "stylishShirt":
-        state.isFullTexture = !activeFilterTab[tabName];
-        break;
-      default:
-        state.isLogoTexture = true;
-        state.isFullTexture = false;
-        break;
-    }
-
-    // after setting the state, activeFilterTab is updated
-
-    setActiveFilterTab((prevState) => {
-      return {
-        ...prevState,
-        [tabName]: !prevState[tabName],
-      };
-    });
   };
 
   const readFile = (type) => {
+    if (!file) return;
     reader(file).then((result) => {
       handleDecals(type, result);
-      setActiveEditorTab("");
+      setFile('');
     });
+  };
+
+  const toggleTexture = (type) => {
+    if (type === 'logo') state.isLogoTexture = !snap.isLogoTexture;
+    if (type === 'full') state.isFullTexture = !snap.isFullTexture;
+  };
+
+  // ── Section renderer ───────────────────────────────────────────────────
+  const renderSectionPanel = () => {
+    switch (activeSection) {
+      case 'flacon':
+        return (
+          <>
+            <BottlePicker />
+            <ColorPicker target="bottle" />
+          </>
+        );
+      case 'jus':
+        return (
+          <>
+            <ColorPicker target="liquid" />
+            <LiquidLevelSlider />
+          </>
+        );
+      case 'bouchon':
+        return <CapPicker />;
+      case 'etiquette':
+        return <FilePicker file={file} setFile={setFile} readFile={readFile} />;
+      case 'gravure':
+        return <EngravingPicker />;
+      case 'fragrance':
+        return <FragrancePicker />;
+      case 'ambiance':
+        return <EnvironmentPicker />;
+      case 'animation':
+        return <AnimationPicker />;
+      case 'import3d':
+        return <PhotoToGlbPicker />;
+      case 'presets':
+        return <PresetPicker />;
+      case 'quiz':
+        return <FragranceQuiz />;
+      default:
+        return null;
+    }
   };
 
   return (
     <AnimatePresence>
       {!snap.intro && (
         <>
+          {/* ── Left panel ───────────────────────────────────────────── */}
           <motion.div
-            key="custom"
             className="absolute top-0 left-0 z-10"
-            {...slideAnimation("left")}
+            {...slideAnimation('left')}
           >
-            <div className="flex items-center min-h-screen">
-              <div className="editortabs-container tabs">
-                {EditorTabs.map((tab) => (
-                  <Tab
-                    key={tab.name}
-                    tab={tab}
-                    handleClick={() => setActiveEditorTab(tab.name)}
-                  />
+            <div className="structured-panel">
+              {/* Sections column */}
+              <div className="sections-column">
+                <h3 className="sections-title">Configuration</h3>
+
+                {SECTIONS.map((section) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => setActiveSection(section.id)}
+                    className={`section-btn ${activeSection === section.id ? 'active' : ''}`}
+                  >
+                    {section.label}
+                  </button>
                 ))}
 
-                {generateTabContent()}
+                <div className="divider" />
+
+                {/* Quick-toggle texture visibility */}
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">
+                  Visibilité
+                </p>
+                {(() => {
+                  const hasLogo = isRealDecal(snap.logoDecal);
+                  const hasFull = isRealDecal(snap.fullDecal);
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => toggleTexture('logo')}
+                        disabled={!hasLogo}
+                        title={hasLogo ? '' : 'Importez d\'abord une image dans Étiquette'}
+                        className={`section-btn compact ${snap.isLogoTexture && hasLogo ? 'active' : ''} ${!hasLogo ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      >
+                        Étiquette logo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleTexture('full')}
+                        disabled={!hasFull}
+                        title={hasFull ? '' : 'Importez d\'abord une image dans Étiquette'}
+                        className={`section-btn compact ${snap.isFullTexture && hasFull ? 'active' : ''} ${!hasFull ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      >
+                        Habillage complet
+                      </button>
+                    </>
+                  );
+                })()}
+
+                <div className="divider" />
+
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  ↺ Tourner en 360° | ⊕ Molette pour zoomer
+                </p>
+              </div>
+
+              {/* Editor column */}
+              <div className="editor-column">
+                <div className="editor-header">
+                  <span className="editor-title">
+                    {SECTIONS.find((s) => s.id === activeSection)?.label}
+                  </span>
+                </div>
+                <div className="editor-content">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSection}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      {renderSectionPanel()}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </motion.div>
 
+          {/* ── Top-right toolbar ─────────────────────────────────────── */}
           <motion.div
-            className="absolute z-10 top-5 right-5"
+            className="absolute z-10 top-5 right-5 flex gap-2 items-center"
             {...fadeAnimation}
           >
+            {/* Undo / Redo */}
+            <button
+              type="button"
+              onClick={undo}
+              className="export-btn text-sm"
+              title="Annuler (Ctrl+Z)"
+            >
+              ↩
+            </button>
+            <button
+              type="button"
+              onClick={redo}
+              className="export-btn text-sm"
+              title="Rétablir (Ctrl+Y)"
+            >
+              ↪
+            </button>
+
+            <ShareButton />
+            <ExportButton />
             <CustomButton
               type="filled"
-              title="Go Back"
-              handleClick={() => (state.intro = true)}
+              title="Accueil"
+              handleClick={() => { state.intro = true; }}
               customStyles="w-fit px-4 py-2.5 font-bold text-sm"
             />
-          </motion.div>
-
-          <motion.div
-            className="filtertabs-container"
-            {...slideAnimation("up")}
-          >
-            {FilterTabs.map((tab) => (
-              <Tab
-                key={tab.name}
-                tab={tab}
-                isFilterTab
-                isActiveTab={activeFilterTab[tab.name]}
-                handleClick={() => handleActiveFilterTab(tab.name)}
-              />
-            ))}
           </motion.div>
         </>
       )}
