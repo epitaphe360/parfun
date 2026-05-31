@@ -39,6 +39,8 @@ const GlassMaterial = forwardRef(({ color: colorProp, ...props }, ref) => {
       matRef.current.transmission = tint.transmission;
       matRef.current.attenuationDistance = tint.attenuationDistance;
       matRef.current.iridescence = snap.bottleShine;
+      matRef.current.roughness = snap.glassRoughness ?? 0.018;
+      matRef.current.clearcoatRoughness = Math.max(0.01, (snap.glassRoughness ?? 0.018) * 0.5);
     }
   });
 
@@ -46,7 +48,7 @@ const GlassMaterial = forwardRef(({ color: colorProp, ...props }, ref) => {
     <meshPhysicalMaterial
       ref={matRef}
       color={colorProp || snap.color}
-      roughness={0.018}
+      roughness={snap.glassRoughness ?? 0.018}
       metalness={0}
       transmission={0.92}
       thickness={1}

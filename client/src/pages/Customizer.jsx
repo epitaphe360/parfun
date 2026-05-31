@@ -4,51 +4,65 @@ import { useSnapshot } from 'valtio';
 
 import {
   AnimationPicker,
-  BottlePicker,
-  CapPicker,
+  BottleCatalog,
+  CapCatalog,
   ColorPicker,
+  ContactForm,
   CustomButton,
+  DesignStep,
   EngravingPicker,
   EnvironmentPicker,
   ExportButton,
-  FilePicker,
-  FragrancePicker,
   FragranceQuiz,
+  InfoPanel,
+  OffersPanel,
+  CatalogUnivers,
   LiquidLevelSlider,
   PhotoToGlbPicker,
   PresetPicker,
+  PumpCatalog,
+  ResetModal,
+  SelectionSummary,
   ShareButton,
 } from '../components';
-import { reader } from '../config/helpers';
 import { fadeAnimation, slideAnimation } from '../config/motion';
 import state from '../store';
-import { loadFromUrl, loadConfig, applyConfigRules } from '../utils/configStorage';
+import { loadFromUrl, loadConfig, applyConfigRules, resetToDefaults } from '../utils/configStorage';
 import { undo, redo } from '../utils/history';
+import { printSummaryPdf } from '../utils/printSummary';
 import { isRealImage } from '../canvas/bottles/BottleLabel';
 
-// Detects whether a decal slot holds a real user image (not the empty placeholder)
 const isRealDecal = (data) => isRealImage(data) && data.length > 200;
 
-const SECTIONS = [
-  { id: 'flacon',    label: 'Flacon' },
-  { id: 'jus',       label: 'Jus' },
-  { id: 'bouchon',   label: 'Bouchon' },
-  { id: 'etiquette', label: 'Étiquette' },
-  { id: 'gravure',   label: 'Gravure' },
-  { id: 'fragrance', label: 'Nom & Vol.' },
-  { id: 'ambiance',  label: 'Ambiance' },
+const MAIN_STEPS = [
+  { id: 'info', label: 'NEXERA' },
+  { id: 'offres', label: 'Offres' },
+  { id: 'catalogue', label: 'Catalogue' },
+  { id: 'bottle', label: 'Flacon' },
+  { id: 'pump', label: 'Pompes' },
+  { id: 'cap', label: 'Bouchons' },
+  { id: 'design', label: 'Design' },
+];
+
+const ADVANCED_STEPS = [
+  { id: 'jus', label: 'Jus' },
+  { id: 'gravure', label: 'Gravure' },
+  { id: 'ambiance', label: 'Ambiance' },
   { id: 'animation', label: 'Animation' },
-  { id: 'import3d',  label: 'Import 3D' },
-  { id: 'presets',   label: 'Presets' },
-  { id: 'quiz',      label: 'Quiz' },
+  { id: 'import3d', label: 'Import 3D' },
+  { id: 'presets', label: 'Presets' },
+  { id: 'quiz', label: 'Quiz' },
 ];
 
 const Customizer = () => {
   const snap = useSnapshot(state);
-  const [file, setFile] = useState('');
-  const [activeSection, setActiveSection] = useState('flacon');
+  const [activeSection, setActiveSection] = useState('bottle');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showContact, setShowContact] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [showSummaryMobile, setShowSummaryMobile] = useState(false);
 
-  // Load saved / URL configuration on first mount
   useEffect(() => {
     if (!loadFromUrl(state)) {
       loadConfig(state);
@@ -57,7 +71,11 @@ const Customizer = () => {
     }
   }, []);
 
-  // Keyboard shortcuts: Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo
+  useEffect(() => {
+    document.body.classList.toggle('summary-open', showSummary);
+    return () => document.body.classList.remove('summary-open');
+  }, [showSummary]);
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -69,40 +87,32 @@ const Customizer = () => {
     return () => globalThis.removeEventListener('keydown', onKey);
   }, []);
 
-  // ── File / decal handling ──────────────────────────────────────────────
-  const handleDecals = (type, result) => {
-    if (type === 'logo') {
-      state.logoDecal = result;
-      state.isLogoTexture = true;
-    } else {
-      state.fullDecal = result;
-      state.isFullTexture = true;
-    }
-  };
-
-  const readFile = (type) => {
-    if (!file) return;
-    reader(file).then((result) => {
-      handleDecals(type, result);
-      setFile('');
-    });
-  };
-
   const toggleTexture = (type) => {
     if (type === 'logo') state.isLogoTexture = !snap.isLogoTexture;
     if (type === 'full') state.isFullTexture = !snap.isFullTexture;
   };
 
-  // ── Section renderer ───────────────────────────────────────────────────
   const renderSectionPanel = () => {
     switch (activeSection) {
-      case 'flacon':
+      case 'info':
+        return <InfoPanel />;
+      case 'offres':
+        return <OffersPanel />;
+      case 'catalogue':
+        return <CatalogUnivers />;
+      case 'bottle':
         return (
           <>
-            <BottlePicker />
+            <BottleCatalog />
             <ColorPicker target="bottle" />
           </>
         );
+      case 'pump':
+        return <PumpCatalog />;
+      case 'cap':
+        return <CapCatalog />;
+      case 'design':
+        return <DesignStep />;
       case 'jus':
         return (
           <>
@@ -110,14 +120,8 @@ const Customizer = () => {
             <LiquidLevelSlider />
           </>
         );
-      case 'bouchon':
-        return <CapPicker />;
-      case 'etiquette':
-        return <FilePicker file={file} setFile={setFile} readFile={readFile} />;
       case 'gravure':
         return <EngravingPicker />;
-      case 'fragrance':
-        return <FragrancePicker />;
       case 'ambiance':
         return <EnvironmentPicker />;
       case 'animation':
@@ -133,21 +137,27 @@ const Customizer = () => {
     }
   };
 
+  const allSteps = [...MAIN_STEPS, ...(showAdvanced ? ADVANCED_STEPS : [])];
+  const sectionLabel = allSteps.find((s) => s.id === activeSection)?.label ?? 'Configuration';
+
+  const handleReset = () => {
+    resetToDefaults(state);
+    setShowReset(false);
+  };
+
   return (
     <AnimatePresence>
       {!snap.intro && (
         <>
-          {/* ── Left panel ───────────────────────────────────────────── */}
           <motion.div
             className="absolute top-0 left-0 z-10"
             {...slideAnimation('left')}
           >
-            <div className="structured-panel">
-              {/* Sections column */}
+            <div className="structured-panel erbatur">
               <div className="sections-column">
-                <h3 className="sections-title">Configuration</h3>
+                <h3 className="sections-title">Sélections</h3>
 
-                {SECTIONS.map((section) => (
+                {MAIN_STEPS.map((section) => (
                   <button
                     key={section.id}
                     type="button"
@@ -158,9 +168,27 @@ const Customizer = () => {
                   </button>
                 ))}
 
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="section-btn compact mt-1 opacity-70"
+                >
+                  {showAdvanced ? '▾ Options avancées' : '▸ Options avancées'}
+                </button>
+
+                {showAdvanced && ADVANCED_STEPS.map((section) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => setActiveSection(section.id)}
+                    className={`section-btn compact ${activeSection === section.id ? 'active' : ''}`}
+                  >
+                    {section.label}
+                  </button>
+                ))}
+
                 <div className="divider" />
 
-                {/* Quick-toggle texture visibility */}
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">
                   Visibilité
                 </p>
@@ -173,37 +201,31 @@ const Customizer = () => {
                         type="button"
                         onClick={() => toggleTexture('logo')}
                         disabled={!hasLogo}
-                        title={hasLogo ? '' : 'Importez d\'abord une image dans Étiquette'}
                         className={`section-btn compact ${snap.isLogoTexture && hasLogo ? 'active' : ''} ${!hasLogo ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
-                        Étiquette logo
+                        Logo
                       </button>
                       <button
                         type="button"
                         onClick={() => toggleTexture('full')}
                         disabled={!hasFull}
-                        title={hasFull ? '' : 'Importez d\'abord une image dans Étiquette'}
                         className={`section-btn compact ${snap.isFullTexture && hasFull ? 'active' : ''} ${!hasFull ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
-                        Habillage complet
+                        Habillage
                       </button>
                     </>
                   );
                 })()}
 
                 <div className="divider" />
-
                 <p className="text-[10px] text-gray-500 leading-relaxed">
-                  ↺ Tourner en 360° | ⊕ Molette pour zoomer
+                  ↺ Tourner | ⊕ Zoomer
                 </p>
               </div>
 
-              {/* Editor column */}
               <div className="editor-column">
                 <div className="editor-header">
-                  <span className="editor-title">
-                    {SECTIONS.find((s) => s.id === activeSection)?.label}
-                  </span>
+                  <span className="editor-title">{sectionLabel}</span>
                 </div>
                 <div className="editor-content">
                   <AnimatePresence mode="wait">
@@ -222,29 +244,59 @@ const Customizer = () => {
             </div>
           </motion.div>
 
-          {/* ── Top-right toolbar ─────────────────────────────────────── */}
+          <button
+            type="button"
+            className="summary-desktop-toggle hidden lg:flex"
+            onClick={() => setShowSummary((v) => !v)}
+          >
+            {showSummary ? '✕ Fermer' : '☰ Récap'}
+          </button>
+
+          {showSummary && (
           <motion.div
-            className="absolute z-10 top-5 right-5 flex gap-2 items-center"
+            className="summary-wrapper hidden lg:block"
+            {...slideAnimation('right')}
+          >
+            {showContact ? (
+              <ContactForm onClose={() => setShowContact(false)} />
+            ) : (
+              <SelectionSummary
+                onContact={() => setShowContact(true)}
+                onReset={() => setShowReset(true)}
+                onPrint={() => printSummaryPdf(state)}
+              />
+            )}
+          </motion.div>
+          )}
+
+          <button
+            type="button"
+            className="summary-mobile-toggle lg:hidden"
+            onClick={() => setShowSummaryMobile((v) => !v)}
+          >
+            {showSummaryMobile ? '✕' : '☰ Récap'}
+          </button>
+
+          {showSummaryMobile && (
+            <div className="summary-mobile lg:hidden">
+              {showContact ? (
+                <ContactForm onClose={() => setShowContact(false)} />
+              ) : (
+                <SelectionSummary
+                  onContact={() => setShowContact(true)}
+                  onReset={() => setShowReset(true)}
+                  onPrint={() => printSummaryPdf(state)}
+                />
+              )}
+            </div>
+          )}
+
+          <motion.div
+            className="absolute z-10 top-5 right-5 flex gap-2 items-center toolbar-right"
             {...fadeAnimation}
           >
-            {/* Undo / Redo */}
-            <button
-              type="button"
-              onClick={undo}
-              className="export-btn text-sm"
-              title="Annuler (Ctrl+Z)"
-            >
-              ↩
-            </button>
-            <button
-              type="button"
-              onClick={redo}
-              className="export-btn text-sm"
-              title="Rétablir (Ctrl+Y)"
-            >
-              ↪
-            </button>
-
+            <button type="button" onClick={undo} className="export-btn text-sm" title="Annuler">↩</button>
+            <button type="button" onClick={redo} className="export-btn text-sm" title="Rétablir">↪</button>
             <ShareButton />
             <ExportButton />
             <CustomButton
@@ -254,6 +306,12 @@ const Customizer = () => {
               customStyles="w-fit px-4 py-2.5 font-bold text-sm"
             />
           </motion.div>
+
+          <ResetModal
+            open={showReset}
+            onCancel={() => setShowReset(false)}
+            onConfirm={handleReset}
+          />
         </>
       )}
     </AnimatePresence>

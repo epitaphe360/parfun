@@ -7,6 +7,7 @@ import GlassMaterial from '../materials/GlassMaterial';
 import { bottleProfiles } from './BottleGeometry';
 import PerfumeLiquid from '../liquid/PerfumeLiquid';
 import Cap from '../caps/Cap';
+import Pump, { getPumpTopHeight } from '../caps/Pump';
 import BottleLabel from './BottleLabel';
 import EngravingMesh from './EngravingMesh';
 import FragranceLabelMesh from './FragranceLabelMesh';
@@ -51,6 +52,7 @@ const ProceduralBottle = () => {
       bottomY: bottleBounds.bottomY,
       centerY: (bottleBounds.topY + bottleBounds.bottomY) / 2,
       liquidRadius: Math.max(0.1, bottleBounds.outerR * 0.28),
+      neckR: bottleBounds.neckR,
       capY: bottleBounds.capY,
       liquidTopY: bottleBounds.topY,
       liquidBottomY: bottleBounds.bottomY,
@@ -78,8 +80,6 @@ const ProceduralBottle = () => {
       logoHeight: height * 0.15,
       engravingY: midY - height * 0.20,
       fragranceY: midY - height * 0.30,
-      neckY: box.max.y - height * 0.10,
-      neckR: Math.max(0.10, outerR * 0.32),
       fragHeight: height * 0.15 * 0.7 * fragSize,
       fragArc: Math.PI * 0.4 * fragSize,
       engrHeight: height * 0.15 * 0.7 * engrSize,
@@ -88,20 +88,18 @@ const ProceduralBottle = () => {
     };
   }, [geometry, snap.logoSize, snap.fragranceLabelSize, snap.engravingSize, snap.bottleType]);
 
-  const showCap = snap.showCap !== false;
+  const showCap = snap.showCap !== false && !snap.showPump;
+
+  const capScale = bottleBounds ? bottleBounds.neckR / CAP_BASE_R : 1;
+  const capSeatY = bottleBounds
+    ? bottleBounds.topY + (snap.showPump ? getPumpTopHeight(bottleBounds.neckR, snap.pumpType) : 0)
+    : 0;
 
   return (
     <group ref={groupRef}>
       <mesh castShadow receiveShadow geometry={geometry} renderOrder={1}>
         <GlassMaterial />
       </mesh>
-
-      {labelProps.isLathe && !state.capOpen && (
-        <mesh castShadow position={[0, labelProps.neckY, 0]} renderOrder={1}>
-          <cylinderGeometry args={[labelProps.neckR * 0.93, labelProps.neckR, 0.1, 32]} />
-          <GlassMaterial />
-        </mesh>
-      )}
 
       <BottleLabel
         bottleGeometry={labelProps.isLathe ? geometry : null}
@@ -131,15 +129,24 @@ const ProceduralBottle = () => {
 
       <PerfumeLiquid
         geometry={liquidGeometry}
+        bottleType={snap.bottleType}
+        isLathe={labelProps.isLathe}
         basePosition={[0, 0, 0]}
         innerScale={0.84}
-        surfaceRadius={labelProps.neckR * 0.88}
       />
+
+      {snap.showPump && bottleBounds && (
+        <Pump
+          position={[0, bottleBounds.topY, 0]}
+          neckRadius={bottleBounds.neckR}
+        />
+      )}
 
       {showCap && bottleBounds && (
         <Cap
-          position={[0, bottleBounds.capY, 0]}
-          scale={bottleBounds.neckR / CAP_BASE_R}
+          key={snap.capCatalogId}
+          seatY={capSeatY}
+          scale={capScale}
         />
       )}
     </group>

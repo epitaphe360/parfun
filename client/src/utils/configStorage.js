@@ -1,8 +1,9 @@
 // Keys safe to put in a URL (no large base64 blobs)
 const URL_KEYS = [
   'color', 'liquidColor', 'capColor', 'capType', 'capFinish',
-  'bottleType', 'bottleSource', 'liquidLevel', 'environment', 'bgMode',
-  'showCap', 'bottleShine',
+  'bottleType', 'bottleSource', 'bottleCatalogId', 'liquidLevel', 'environment', 'bgMode',
+  'showCap', 'bottleShine', 'glassRoughness', 'coatingType',
+  'pumpId', 'pumpType', 'pumpColor', 'showPump', 'capCatalogId',
   'showEngraving', 'engravingText', 'engravingFont', 'engravingColor',
   'isLogoTexture', 'isFullTexture',
   'fragranceName', 'volumeMl', 'showFragranceLabel',
@@ -15,10 +16,8 @@ const LS_KEY = 'parfun_config_v3';
 
 /** Keep cap/bottle mode consistent after load or preset apply. */
 export const applyConfigRules = (stateProxy) => {
-  if (stateProxy.bottleSource === 'procedural') {
+  if (!stateProxy.useCustomGlb) {
     stateProxy.showCap = true;
-  } else if (!stateProxy.useCustomGlb) {
-    stateProxy.showCap = false;
   }
   stateProxy.capOpen = false;
   stateProxy.sprayActive = false;
@@ -61,6 +60,37 @@ export const getShareUrl = (stateProxy) => {
   } catch (_) {
     return window.location.href;
   }
+};
+
+export const resetToDefaults = (stateProxy) => {
+  stateProxy.bottleCatalogId = 'glb-classic';
+  stateProxy.bottleType = 'elegant';
+  stateProxy.bottleSource = 'glb';
+  stateProxy.volumeMl = 50;
+  stateProxy.color = '#F4EDE4';
+  stateProxy.liquidColor = '#7E1F3A';
+  stateProxy.liquidLevel = 0.68;
+  stateProxy.capCatalogId = 'classic-gold';
+  stateProxy.capType = 'classic';
+  stateProxy.capFinish = 'gold';
+  stateProxy.capColor = '#D4AF37';
+  stateProxy.pumpId = 'pump-collar-gold';
+  stateProxy.pumpType = 'collar';
+  stateProxy.pumpColor = '#D4AF37';
+  stateProxy.showPump = false;
+  stateProxy.coatingType = 'empty';
+  stateProxy.bottleShine = 0.35;
+  stateProxy.glassRoughness = 0.08;
+  stateProxy.fragranceName = 'Mon parfum';
+  stateProxy.showFragranceLabel = false;
+  stateProxy.isLogoTexture = false;
+  stateProxy.isFullTexture = false;
+  stateProxy.useCustomGlb = false;
+  stateProxy.customGlbUrl = null;
+  stateProxy.preset = null;
+  stateProxy.selectedPack = 'starter';
+  stateProxy.selectedUniverse = 'parfumerie';
+  applyConfigRules(stateProxy);
 };
 
 export const loadFromUrl = (stateProxy) => {

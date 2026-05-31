@@ -9,7 +9,10 @@ const state = proxy({
   color: '#F4EDE4',
   bottleType: 'elegant',
   bottleSource: 'glb',
+  bottleCatalogId: 'glb-classic',
   bottleShine: 0.35,       // iridescence strength 0–1
+  glassRoughness: 0.08,
+  coatingType: 'empty',
 
   // --- Liquid ---
   liquidColor: '#7E1F3A',
@@ -19,8 +22,15 @@ const state = proxy({
   capColor: '#D4AF37',
   capType: 'classic',
   capFinish: 'gold',
-  showCap: false,           // GLB has native cap by default — toggle on for procedural
+  capCatalogId: 'classic-gold',
+  showCap: true,
   capOpen: false,
+
+  // --- Pump (Erbatur-style catalog) ---
+  pumpId: 'pump-collar-gold',
+  pumpType: 'collar',
+  pumpColor: '#D4AF37',
+  showPump: false,
 
   // --- Labels ---
   isLogoTexture: false,
@@ -62,6 +72,20 @@ const state = proxy({
   preset: null,
   fragranceName: 'Mon parfum',
   volumeMl: 50,
+  contact: {
+    name: '',
+    company: '',
+    email: '',
+    phone: '',
+    message: '',
+    qtyBottles: '',
+    qtyPumps: '',
+    qtyCaps: '',
+  },
+
+  selectedPack: 'starter',
+  selectedUniverse: 'parfumerie',
+
   bottleMetrics: {
     height: 1.2,
     topY: 1.2,

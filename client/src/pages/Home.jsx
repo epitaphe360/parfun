@@ -2,7 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSnapshot } from 'valtio';
 
 import state from '../store';
-import { CustomButton } from '../components';
+import { CatalogUnivers } from '../components';
+import { NEXERA, NEXERA_PACKS } from '../config/nexera';
 import {
   headContainerAnimation,
   headContentAnimation,
@@ -16,29 +17,35 @@ const Home = () => {
   return (
     <AnimatePresence>
       {snap.intro && (
-        <motion.section className="home" {...slideAnimation('left')}>
-          <motion.header {...slideAnimation("down")}>
-            <span className="brand-mark">PARFUN</span>
+        <motion.section className="home home-nexera" {...slideAnimation('left')}>
+          <motion.header {...slideAnimation('down')} className="home-header">
+            <span className="brand-mark">{NEXERA.name}</span>
           </motion.header>
 
           <motion.div className="home-content" {...headContainerAnimation}>
-            <motion.div {...headTextAnimation}>
-              <h1 className="head-text">
-                PARFUM <br className="xl:block hidden" /> 3D.
+            <motion.div {...headTextAnimation} className="home-hero">
+              <h1 className="head-text head-text-nexera">
+                MARQUE <br className="hidden lg:block" /> COSMÉTIQUE.
               </h1>
-            </motion.div>
-            <motion.div {...headContentAnimation} className="flex flex-col gap-5">
-              <p className="max-w-md font-normal text-gray-600 text-base leading-relaxed">
-                Créez votre flacon de parfum unique. <strong>Verre photoréaliste</strong>,
-                liquide animé, bouchons interchangeables et import GLB réel.
+              <p className="home-tagline">
+                {NEXERA.tagline}. De l&apos;idée à la mise sur le marché —
+                <strong> configurateur 3D parfumerie</strong>, catalogue ACL et accompagnement 360°.
               </p>
+            </motion.div>
 
-              <CustomButton
-                type="filled"
-                title="Créer mon parfum"
-                handleClick={() => (state.intro = false)}
-                customStyles="w-fit px-6 py-3 font-bold text-sm"
-              />
+            <motion.div {...headContentAnimation} className="home-panel">
+              <CatalogUnivers onStartConfigurator={() => { state.intro = false; }} />
+
+              <div className="home-packs-preview">
+                <p className="home-packs-label">Nos packs</p>
+                <div className="home-packs-row">
+                  {NEXERA_PACKS.map((p) => (
+                    <span key={p.id} className="home-pack-chip">
+                      {p.name.replace('Pack ', '')}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         </motion.section>

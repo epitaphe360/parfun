@@ -12,16 +12,12 @@ import FragranceLabelMesh from './FragranceLabelMesh';
 import { normalizeObject } from '../../utils/exportGlb';
 import useBottleMetrics from '../hooks/useBottleMetrics';
 import GlbInteriorLiquid from '../liquid/GlbInteriorLiquid';
-import { detectBodyTopY, sampleBottleRadius } from '../hooks/sampleBottleRadius';
+import Cap from '../caps/Cap';
+import Pump, { getPumpTopHeight } from '../caps/Pump';
+import { detectBodyTopY, sampleBottleInnerRadius, sampleBottleRadius } from '../hooks/sampleBottleRadius';
 
+const CAP_BASE_R = 0.14;
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-
-const CAP_FINISH = {
-  gold:   { metalness: 1,    roughness: 0.12, clearcoat: 0.85, clearcoatRoughness: 0.08 },
-  silver: { metalness: 1,    roughness: 0.1,  clearcoat: 0.9,  clearcoatRoughness: 0.06 },
-  matte:  { metalness: 0.05, roughness: 0.92, clearcoat: 0.1,  clearcoatRoughness: 0.9  },
-  custom: { metalness: 0.85, roughness: 0.2,  clearcoat: 0.55, clearcoatRoughness: 0.18 },
-};
 
 const glassTintFromHex = (hex) => {
   const c = new THREE.Color(hex);
@@ -36,16 +32,17 @@ const glassTintFromHex = (hex) => {
 
 const makeGlassMaterial = (color, clippingPlanes = []) => {
   const tint = glassTintFromHex(color);
+  const rough = state.glassRoughness ?? 0.018;
   return new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(color),
-    roughness: 0.018,
+    roughness: rough,
     metalness: 0,
     transmission: tint.transmission,
     thickness: 1,
     ior: 1.55,
     transparent: true,
     clearcoat: 1,
-    clearcoatRoughness: 0.01,
+    clearcoatRoughness: Math.max(0.01, rough * 0.5),
     attenuationColor: new THREE.Color(color),
     attenuationDistance: tint.attenuationDistance,
     envMapIntensity: 2,
@@ -53,19 +50,6 @@ const makeGlassMaterial = (color, clippingPlanes = []) => {
     iridescenceIOR: 1.32,
     iridescenceThicknessRange: [80, 380],
     depthWrite: false,
-    clippingPlanes,
-    clipShadows: true,
-  });
-};
-
-const makeMetalCapMaterial = (color, finishKey, clippingPlanes = []) => {
-  const f = CAP_FINISH[finishKey] || CAP_FINISH.custom;
-  return new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(color),
-    ...f,
-    transmission: 0,
-    ior: 2.4,
-    envMapIntensity: 1.6,
     clippingPlanes,
     clipShadows: true,
   });
@@ -96,22 +80,17 @@ const prepareScene = (scene) => {
   };
 };
 
-const BottleShell = ({ source, bodyTopY, bottleHeight }) => {
+/** Corps verre GLB — bouchon natif masqué par clipping, remplacé par Cap catalogue. */
+const BottleShell = ({ source, bodyTopY }) => {
   const snap = useSnapshot(state);
   const { gl } = useThree();
-  const capGroupRef = useRef();
-  const capLiftRef = useRef(0);
-
   const bodyPlane = useRef(new THREE.Plane(new THREE.Vector3(0, -1, 0), bodyTopY));
-  const capPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), -bodyTopY));
 
   useEffect(() => { gl.localClippingEnabled = true; }, [gl]);
 
-  const { bodyObj, capObj, bodyMats, capMats } = useMemo(() => {
+  const { bodyObj, bodyMats } = useMemo(() => {
     const bodyClone = source.clone(true);
-    const capClone = source.clone(true);
     const bMats = [];
-    const cMats = [];
 
     bodyClone.traverse((child) => {
       if (!child.isMesh) return;
@@ -123,22 +102,11 @@ const BottleShell = ({ source, bodyTopY, bottleHeight }) => {
       bMats.push(mat);
     });
 
-    capClone.traverse((child) => {
-      if (!child.isMesh) return;
-      child.castShadow = true;
-      child.receiveShadow = true;
-      child.renderOrder = 3;
-      const mat = makeMetalCapMaterial(snap.capColor, snap.capFinish, [capPlane.current]);
-      child.material = mat;
-      cMats.push(mat);
-    });
-
-    return { bodyObj: bodyClone, capObj: capClone, bodyMats: bMats, capMats: cMats };
+    return { bodyObj: bodyClone, bodyMats: bMats };
   }, [source]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bodyPlane.current.constant = bodyTopY;
-    capPlane.current.constant = -bodyTopY;
   }, [bodyTopY]);
 
   useFrame((_, delta) => {
@@ -149,44 +117,13 @@ const BottleShell = ({ source, bodyTopY, bottleHeight }) => {
       mat.transmission = tint.transmission;
       mat.attenuationDistance = tint.attenuationDistance;
       mat.iridescence = snap.bottleShine;
+      mat.roughness = snap.glassRoughness ?? 0.018;
+      mat.clearcoatRoughness = Math.max(0.01, (snap.glassRoughness ?? 0.018) * 0.5);
     });
-
-    const finish = CAP_FINISH[snap.capFinish] || CAP_FINISH.custom;
-    capMats.forEach((mat) => {
-      easing.dampC(mat.color, snap.capColor, 0.25, delta);
-      mat.metalness = finish.metalness;
-      mat.roughness = finish.roughness;
-      mat.clearcoat = finish.clearcoat;
-      mat.clearcoatRoughness = finish.clearcoatRoughness;
-    });
-
-    const liftMax = (bottleHeight ?? 1.2) * 0.14;
-    const target = state.capOpen ? liftMax : 0;
-    capLiftRef.current = THREE.MathUtils.lerp(
-      capLiftRef.current, target, 1 - Math.exp(-delta * 6)
-    );
-
     bodyPlane.current.constant = bodyTopY;
-
-    if (capGroupRef.current) {
-      const lift = capLiftRef.current;
-      capGroupRef.current.position.set(0, lift, 0);
-      capGroupRef.current.rotation.x = -lift * 0.22;
-    }
   });
 
-  return (
-    <group>
-      <primitive object={bodyObj} />
-      <group position={[0, bodyTopY, 0]}>
-        <group ref={capGroupRef}>
-          <group position={[0, -bodyTopY, 0]}>
-            <primitive object={capObj} />
-          </group>
-        </group>
-      </group>
-    </group>
-  );
+  return <primitive object={bodyObj} />;
 };
 
 const buildWrapSleeve = (bottleRoot, bottomY, topY, fallbackR) => {
@@ -264,9 +201,17 @@ const CustomGlbBottle = ({ url = '/perfume_bottle.glb' }) => {
 
   useBottleMetrics(pack.root, {
     bodyRatio: pack.bodyRatio,
-    hasNativeCap: true,
+    hasNativeCap: false,
     bodyTopY: pack.bodyTopY,
   });
+
+  useEffect(() => {
+    if (!pack?.root) return;
+    state.bottleMetrics = {
+      ...state.bottleMetrics,
+      neckR: sampleBottleInnerRadius(pack.root, pack.bodyTopY, 0.12),
+    };
+  }, [pack]);
 
   useEffect(() => {
     if (state.importStatus === 'loading' && pack?.root) {
@@ -306,19 +251,32 @@ const CustomGlbBottle = ({ url = '/perfume_bottle.glb' }) => {
 
   if (!labels) return null;
 
+  const neckR = sampleBottleInnerRadius(pack.root, pack.bodyTopY, 0.12);
+  const capScale = neckR / CAP_BASE_R;
+  const showCap = snap.showCap !== false && !snap.showPump;
+  const capSeatY = pack.bodyTopY + (snap.showPump ? getPumpTopHeight(neckR, snap.pumpType) : 0);
+
   return (
     <group>
-      <BottleShell
-        source={pack.root}
-        bodyTopY={pack.bodyTopY}
-        bottleHeight={pack.size.y}
-      />
+      <BottleShell source={pack.root} bodyTopY={pack.bodyTopY} />
 
       <GlbInteriorLiquid
         bottleRoot={pack.root}
         bodyTopY={pack.bodyTopY}
         liquidBottomY={pack.liquidBottomY}
       />
+
+      {snap.showPump && (
+        <Pump position={[0, pack.bodyTopY, 0]} neckRadius={neckR} />
+      )}
+
+      {showCap && (
+        <Cap
+          key={snap.capCatalogId}
+          seatY={capSeatY}
+          scale={capScale}
+        />
+      )}
 
       <BottleLabel
         useCurvedLogo

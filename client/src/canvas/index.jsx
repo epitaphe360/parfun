@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import { Suspense, Component, useState } from 'react';
+import { useSnapshot } from 'valtio';
 
 import state from '../store';
 import PerfumeScene from './PerfumeScene';
@@ -55,6 +56,11 @@ class SceneErrorBoundary extends Component {
 
 const CanvasModel = () => {
   const [ready, setReady] = useState(false);
+  const snap = useSnapshot(state);
+
+  const camera = snap.intro
+    ? { position: [0.15, 0.78, 2.65], fov: 28 }
+    : { position: [0.2, 0.82, 2.35], fov: 30 };
 
   return (
     <div className="relative w-full h-full">
@@ -62,7 +68,7 @@ const CanvasModel = () => {
       <SceneErrorBoundary>
         <Canvas
           shadows
-          camera={{ position: [0.2, 0.82, 2.35], fov: 30 }}
+          camera={camera}
           gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
           className="w-full max-w-full h-full transition-all ease-in"
           dpr={[1, 2]}

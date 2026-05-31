@@ -7,6 +7,7 @@ import { bottleGroupRef, sceneRef } from '../utils/sceneRef';
 import CustomGlbBottle from './bottles/CustomGlbBottle';
 import ProceduralBottle from './bottles/ProceduralBottle';
 import SprayParticles from './effects/SprayParticles';
+import { getPumpTopHeight } from './caps/Pump';
 
 const PerfumeScene = () => {
   const snap = useSnapshot(state);
@@ -34,7 +35,9 @@ const PerfumeScene = () => {
   };
 
   const capLift = state.capOpen ? (snap.bottleMetrics?.height ?? 1.2) * 0.14 : 0;
-  const nozzleY = (snap.bottleMetrics?.topY ?? 1.2) + capLift + 0.03;
+  const neckR = snap.bottleMetrics?.neckR ?? snap.bottleMetrics?.liquidRadius ?? 0.12;
+  const pumpExtra = snap.showPump ? getPumpTopHeight(neckR, snap.pumpType) : 0;
+  const nozzleY = (snap.bottleMetrics?.topY ?? 1.2) + pumpExtra + capLift + 0.03;
 
   return (
     <group ref={groupRef}>

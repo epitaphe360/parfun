@@ -13,6 +13,16 @@ import AnimationPicker from './AnimationPicker';
 import ShareButton from './ShareButton';
 import FragrancePicker from './FragrancePicker';
 import FragranceQuiz from './FragranceQuiz';
+import BottleCatalog from './BottleCatalog';
+import PumpCatalog from './PumpCatalog';
+import CapCatalog from './CapCatalog';
+import DesignStep from './DesignStep';
+import InfoPanel from './InfoPanel';
+import OffersPanel from './OffersPanel';
+import CatalogUnivers from './CatalogUnivers';
+import SelectionSummary from './SelectionSummary';
+import ContactForm from './ContactForm';
+import ResetModal from './ResetModal';
 
 export {
   CustomButton,
@@ -30,4 +40,14 @@ export {
   ShareButton,
   FragrancePicker,
   FragranceQuiz,
+  BottleCatalog,
+  PumpCatalog,
+  CapCatalog,
+  DesignStep,
+  InfoPanel,
+  OffersPanel,
+  CatalogUnivers,
+  SelectionSummary,
+  ContactForm,
+  ResetModal,
 };
